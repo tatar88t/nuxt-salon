@@ -1,0 +1,169 @@
+insert into employee(name, surname, secondname,emp_phone)
+
+VALUES(
+'еще',
+	'Сотрудник',
+'Одинвич',
+	'+71113003040'
+);
+
+select * from employee
+
+select * from emp_schedule
+select * from assignation
+ALTER TABLE emp_schedule
+ADD constraint emp_id FOREIGN KEY (emp_id) references employee(id)
+
+ADD column fk_emp_id int not null
+
+ALTER TABLE emp_schedule
+ADD column emp_id int unique
+
+ALTER TABLE emp_schedule
+DROP column emp_schedule_id
+
+insert into emp_schedule(emp_id, work_shift)
+
+VALUES(
+5,
+1
+);
+drop table emp_schedule
+
+create table emp_schedule (
+emp_id int not null,
+	primary key (emp_id),
+	CONSTRAINT fk_emp_id foreign key (emp_id) references employee(id),
+work_shift int unique
+)
+
+ALTER TABLE emp_schedule
+ADD column assign_id int unique
+
+create table work_shift (
+id serial primary key,
+	start_dt timestamp not null, 
+	end_dt timestamp not null,
+	work_shift_id int REFERENCES emp_schedule(emp_id)
+)
+
+create table assignation (
+	id serial primary key,
+	assign_dt timestamp not null, 
+	service_code int not null,
+	assign_id int REFERENCES emp_schedule(assign_id),
+	work_shift_id int REFERENCES work_shift(id) 
+)
+
+ALTER TABLE assignation
+DROP column assign_id
+ADD column emp_id int,
+ADD CONSTRAINT fk_emp_id foreign key (emp_id) references employee(id)
+
+ADD column phone varchar(20) not NULL
+
+ALTER TABLE emp_schedule
+ADD column assign_id int,
+ADD CONSTRAINT fk_assign_id foreign key (assign_id) references assignation(id)
+drop table emp_schedule
+
+select * from work_shift
+
+ALTER TABLE work_shift
+ADD column emp_id int,
+ADD CONSTRAINT fk_emp_id foreign key (emp_id) references employee(id)
+
+select * from assignation
+
+ALTER TABLE assignation
+ADD column emp_id int,
+ADD CONSTRAINT fk_emp_id foreign key (emp_id) references employee(id),
+ADD column work_shift_id int,
+ADD CONSTRAINT fk_work_shift_id foreign key (work_shift_id) references work_shift(id)
+
+create table service (
+	id serial primary key,
+	name varchar(50) not null, 
+	descr text,
+	duration_min int 
+)
+
+insert into service(name, descr, duration_min)
+
+VALUES(
+'Укольчик',
+'Укол в жопу',
+	90
+);
+
+ALTER TABLE assignation
+ADD column services integer[]
+ADD CONSTRAINT fk_service_code foreign key (service_code) references service(id)
+
+select * from employee
+
+insert into work_shift(start_dt, end_dt, emp_id)
+VALUES(
+'2023-12-09 11:00:00',
+'2023-12-09 22:00:00',
+	5
+);
+
+SELECT   C.id, C.start_dt, C.end_dt, C.emp_id
+FROM        employee P
+INNER JOIN  work_shift  C
+    ON      C.emp_id = P.id
+	GROUP BY    P.Name
+	
+	
+	
+	SELECT
+    e.id AS emp_id,
+    e.name,
+	CASE WHEN COUNT(ws.id) > 0 THEN
+--     COALESCE(jsonb_agg(jsonb_build_object(
+--         'id', ws.id,
+--         'empId', ws.emp_id,
+--         'startDt', ws.start_dt
+--     )), '[]'::jsonb) 
+jsonb_agg(jsonb_build_object(
+      'id', ws.id,
+      'empId', ws.emp_id,
+      'startDt', ws.start_dt,
+      'endDt', ws.end_Dt
+  ))
+	ELSE '[]'::jsonb
+	END
+	AS work_shift
+
+FROM
+    employee e
+LEFT JOIN
+    work_shift ws ON e.id = ws.emp_id
+-- WHERE
+--     ws.start_dt >= CURRENT_DATE -- Filter work shifts starting from today
+--     OR 
+-- 	ws.start_dt IS NULL -- Include employees with no work shifts
+GROUP BY
+    e.id, e.name;
+	
+
+SELECT
+    e.id AS emp_id,
+    e.name,
+    COALESCE(
+        jsonb_agg(
+            jsonb_build_object(
+                'id', ws.id,
+                'empId', ws.emp_id,
+                'startDt', ws.start_dt
+            )
+        ) FILTER (WHERE ws.id IS NOT NULL AND ws.start_dt >= CURRENT_DATE),
+        '[]'::jsonb
+    ) AS work_shift
+FROM
+    employee e
+LEFT JOIN
+    work_shift ws ON e.id = ws.emp_id
+GROUP BY
+    e.id, e.name;
